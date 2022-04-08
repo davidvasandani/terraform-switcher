@@ -52,7 +52,7 @@ const (
 var version = "0.12.0\n"
 
 func main() {
-	dir := lib.GetCurrentDirectory()
+	tfArch := getopt.StringLong("arch", 'a', runtime.GOARCH, "Force the architecture the terraform binary. Ex: tfswitch -a "+runtime.GOARCH)
 	custBinPath := getopt.StringLong("bin", 'b', lib.ConvertExecutableExt(defaultBin), "Custom binary path. Ex: tfswitch -b "+lib.ConvertExecutableExt("/Users/username/bin/terraform"))
 	listAllFlag := getopt.BoolLong("list-all", 'l', "List all versions of terraform - including beta and rc")
 	latestPre := getopt.StringLong("latest-pre", 'p', defaultLatest, "Latest pre-release implicit version. Ex: tfswitch --latest-pre 0.13 downloads 0.13.0-rc1 (latest)")
@@ -132,8 +132,8 @@ func main() {
 			tfversion := retrieveFileContents(TFVersionFile)
 			installVersion(tfArch, tfversion, &binPath, mirrorURL)
 		/* if versions.tf file found (IN ADDITION TO A TOML FILE) */
-		case checkTFModuleFileExist(*chDirPath) && len(args) == 0:
-			installTFProvidedModule(*chDirPath, &binPath, mirrorURL)
+		case checkTFModuleFileExist(dir) && len(args) == 0:
+			installTFProvidedModule(tfArch, dir, &binPath, mirrorURL)
 		/* if Terraform Version environment variable is set */
 		case checkTFEnvExist() && len(args) == 0 && version == "":
 			tfversion := os.Getenv("TF_VERSION")
@@ -203,8 +203,8 @@ func main() {
 		installVersion(tfArch, tfversion, custBinPath, mirrorURL)
 
 	/* if versions.tf file found */
-	case checkTFModuleFileExist(*chDirPath) && len(args) == 0:
-		installTFProvidedModule(*chDirPath, custBinPath, mirrorURL)
+	case checkTFModuleFileExist(dir) && len(args) == 0:
+		installTFProvidedModule(tfArch, dir, custBinPath, mirrorURL)
 
 	/* if terragrunt.hcl file found */
 	case fileExists(TGHACLFile) && checkVersionDefinedHCL(&TGHACLFile) && len(args) == 0:
@@ -284,7 +284,7 @@ func installVersion(tfArch *string, arg string, custBinPath *string, mirrorURL *
 		recentDownloadFile := lib.CheckFileExist(installFileVersionPath)
 		if recentDownloadFile {
 			lib.ChangeSymlink(installFileVersionPath, *custBinPath)
-			fmt.Printf("Switched terraform to version %q (%s)\n", requestedVersion, *tfArch)
+			fmt.Printf("Switched terraform to version %q \n", requestedVersion)
 			lib.AddRecent(requestedVersion + "-" + *tfArch) //add to recent file for faster lookup
 			os.Exit(0)
 		}
